@@ -1,0 +1,348 @@
+---
+title: "Measuring Ecological Intelligence on University Students"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: true
+    theme: cerulean
+    highlight: tango
+    code_folding: hide
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding) })
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+library(openxlsx)
+library(dplyr)
+library(psych)
+library(ggplot2)
+library(Hmisc)
+library(ggcorrplot)
+library(lavaan)
+library(GGally)
+library(ggplot2)
+library(gridExtra)
+library(qqplotr)
+
+options(warn=-1)
+```
+
+## Intelligence Scale
+
+Ecological intelligence aims to develop social and environmental responsability and awareness, to think critically, to pursue cooperative learning, and to bring about behavioral change in the long-term. 
+
+Ecological intelligence should have a holistic perspective because there are seen and unseen webs among biotic and abiotic factors in the world. According to the model of Okur-Berberoglu (2020), social intelligence and economy are subsets of ecological intelligence. Social intelligence refers to social responsibilities of people in terms of sustainability. Economy should be based on sustainable development instead of explotation of environmental and human resources.
+
+Okur-Berberoglu (2020) developed a scale for ecological intelligence. The questionnaire consists of 12 questions based on a 5 Likert scale that were scored as 1-Completely disagree, 2-Partly disagree, 3-Not sure, 4-Partly agree, and 5-Completely agree. The questions were the following.        
+1. I get my full water bottle while leaving home.    
+2. I wonder about increasing of cancer events in industrial areas.    
+3. Degenerated environmental conditions can cause negative effect on mental health.     
+4. What a pitty!, people think that technology can solve every problem, althought technology cannot produce one gram organic honey.    
+5. The reflection of environmental problems can be seen at the same time, in succession, and more than one area.    
+6. I try to pattern people who have positive ecologic behavior in my social life.   
+7. I prefer to buy local vegetables and fruits.    
+8. I believe that one of the ways of fighting with obesity is environmental education.   
+9. I have remorse to know some goods I buy, are produced by explotation of human work.    
+10. One of the reasons of immigration of rural people, is the job lost due to global firms.     
+11. Global firms prevent local producer to have profit.    
+12. People, to immigrate to another place, are cheaper laborer sources for big companies. 
+
+This scale was based on Turkey and Turkish lifestyle, as the author comment in his work this scale should the tested and understood by other researchers.
+
+## Descriptive statistics
+
+We read the clean data. The cleaning was done in Python. 
+
+```{r, echo=TRUE}
+data_file_path <- here::here("data", "Eco_Intel2_clean.xlsx")
+dfenc <- read.xlsx(xlsxFile = data_file_path) 
+head(dfenc)
+```
+
+Now we compute the indicators and its statistics.
+
+```{r, echo=TRUE}
+dfenc$campus[dfenc$campus == "Aguascalientes"] <- "Otro"
+dfenc$campus[dfenc$campus == "Morelia"] <- "Otro"
+
+options(width=200)
+dfenc <- dfenc %>%
+  mutate(holis = (holis1+holis2+holis3+holis4+holis5)/5,
+         social = (social1+social2+social3+social4)/4,
+         econ = (econ1+econ2+econ3)/3)
+psych::describe(select(dfenc,holis:econ, change))
+```
+Let us compare the dimensions by campus.
+```{r, echo=TRUE}
+stkfacts <- data.frame()
+namefacts <- c("Holistic", "Social", "Econ")
+tagfacts <- c("holis", "social", "econ")
+for (i in 1:3) {
+  dftmp <- data.frame(student = dfenc$student,
+                      campus = dfenc$campus,
+                      fact=rep(namefacts[i],nrow(dfenc)),
+                      value = dfenc[, tagfacts[i]])
+  stkfacts <- rbind(stkfacts, dftmp)
+}
+
+ggplot(stkfacts, aes(y=fact, x=value, fill=campus)) +
+  geom_boxplot() +
+  theme(axis.title.y = element_blank())
+```
+
+## Correlation
+
+The ecological intellegence questionnaire is composed of items that use a Likert scale, so these variables are ordinal. We compare three types of correlation: Pearson, Spearman and polychoric. 
+
+### Pearson correlation
+
+The Pearson correlation is used when the variables are continuous and the relationship is linear.
+
+Let $X_1, X_2, \dots, X_p$ be a set of ordinal variables. The Pearson correlation is defined as
+$$
+r_{ij} = \frac{\sum_{k=1}^n (X_{ik} - \bar{X}_i)(X_{jk} - \bar{X}_j)}{\sqrt{\sum_{k=1}^n (X_{ik} - \bar{X}_i)^2 \sum_{k=1}^n (X_{jk} - \bar{X}_j)^2}}
+$$
+where $\bar{X}_i$ is the mean of the $i$th variable.
+
+```{r, echo=TRUE}
+corr_matrix <- cor(select(dfenc, holis1:econ3))
+ggcorrplot(corr_matrix, 
+       type = "lower", 
+       lab = TRUE, 
+       lab_size = 3, 
+       insig = "blank", 
+       p.mat = cor_pmat(select(dfenc, holis1:econ3)), 
+       sig.level = 0.10)
+```
+
+### Spearman correlation
+
+The Spearman correlation is used when the variables are ordinal and the relationship is monotonic. 
+
+The Spearman correlation is defined as
+$$
+r_s = \frac{\sum_{i=1}^n (r_{x_{1i}}-\bar{r}_{x1})(r_{x_{2i}}-\bar{r}_{x2})}{\sqrt{\sum_{i=1}^n (r_{x_{1i}}-\bar{r}_{x1})^2 \sum_{i=1}^n (r_{x_{2i}}-\bar{r}_{x2})^2}}
+$$
+where $r_{x_{1i}}$ is the rank of the $i$th observation of the first variable, and $\bar{r}_{x1}$ is the mean of the ranks of the first variable.
+
+```{r, echo=TRUE}
+spearman_corr_matrix <- cor(select(dfenc, holis1:econ3), method = "spearman")
+ggcorrplot(spearman_corr_matrix, 
+       type = "lower", 
+       lab = TRUE, 
+       lab_size = 3, 
+       insig = "blank", 
+       p.mat = cor_pmat(select(dfenc, holis1:econ3), method = "spearman"), 
+       sig.level = 0.10)
+```
+
+### Polychoric correlation
+
+The polychoric correlation is used when the variables are ordinal, like Likert scales. It assumes that the ordinal variables are the result from discretized continuous latent variables with bivariate normal distributions. For instance, an item with five categories is conceptualized as dividing a latent variable into categories defined by thresholds on the latent variable $\xi$:
+$$
+X = \left\{ 
+\begin{array}{ll}
+\hbox{1-Completely disagree} & \hbox{ if } \xi < \tau_1 \\
+\hbox{2-Disagree} & \hbox{ if } \tau_1 \leq \xi < \tau_2 \\
+\hbox{3-Neither disagree or agree} & \hbox{ if } \tau_2 \leq \xi < \tau_3 \\
+\hbox{4-Agree} & \hbox{ if } \tau_3 \leq \xi < \tau_4 \\
+\hbox{5-Completely agree} & \hbox{ if } \xi \geq \tau_4 \\
+\end{array}
+\right.
+$$
+where $\tau_1, \tau_2, \tau_3, \tau_4$ are the thresholds. 
+
+The first step of the algorithm is to estimate these thresholds. Each threshold can be determined based on the relative frequency of the $k$ categories. We use that observed likert scale comes from an underlying bivariate normal distribution $(X,Y)$. The likelihood for the frequency table is given by
+$$
+L(\rho) = \prod_{i=1}^{k-1}\prod_{j=1}^{k-1}P_{ij}^{n_{ij}}
+$$
+where $P_{ij}$ is the probability of observing the cell $(i,j)$ in the table. The probability is given by
+$$
+P_{ij} = P(\hat\tau_{i} < X < \hat\tau_{i+1}, \hat\eta_{j} < Y < \hat\eta_{j+1}) 
+$$
+and
+$$
+\hat\tau_k = \Phi^{-1}\left( \sum_{i=1}^k \frac{n_k}{N}\right).
+$$
+The $\eta_1, \eta_2, \eta_3, \eta_4$ are the thresholds for the variable $Y$.
+
+The $\rho$ that maximizes the likelihood function $L(\rho)$ is the polychoric correlation.
+```{r, echo=TRUE}
+library(psych)
+polychoric_corr <- polychoric(select(dfenc, holis1:econ3))
+polychoric_corr_matrix <- polychoric_corr$rho
+ggcorrplot(polychoric_corr_matrix, 
+  type = "lower", 
+  lab = TRUE, 
+  lab_size = 3, 
+  insig = "blank", 
+  p.mat = cor_pmat(select(dfenc, holis1:econ3)), 
+  sig.level = 0.10)
+```
+
+
+## Scale reliability
+
+Reliability of a scale refers to the consistency and dependability of the results it produces across different instances of measurement. High reliability is crucial for ensuring that the scale provides accurate and reproducible results, making it a trustworthy tool for both clinical and research purposes. 
+
+In research reports, reliability and standard error estimations are being reported form measurement instruments used a study. In item response theory, reliability estimates do not depend on groups, and measurement errors are estimated for every different score.
+
+Reliability is joint characteristic of a test and examinee group, not just a characteristic of a test.
+
+### Cronbach's alpha
+
+When items are used to form a scale they need to have internal consistency. The items should all measure the same thing, so they should be correlated with on another. A useful coefficient for assessing internal consistency is Cronbach's alpha. 
+
+Ordinal aplha is conceptually equivalent to Cronbach's alpha. The critical difference between the two is that ordinal alpha is based on polychoric correlations, while Cronbach's alpha is based on Pearson correlations.
+
+The formula is:
+$$
+\alpha = \frac{k}{k-1} \left( 1-\frac{\sum s_i^2}{s_T^2} \right)
+$$
+where $k$ is the number of items, $s_i^2$ is the variance of the ith item and $s_T^2$ is the variance of the total score formed by summing all the items. If the items are all independent, then $\alpha =0$. If the items are all identical and so perfectly correlated, then $\alpha = 1$. 
+```{r, echo=TRUE}
+psych::alpha(select(dfenc, holis1:econ3))
+psych::alpha(select(dfenc, holis1:holis5))
+psych::alpha(select(dfenc, social1:social4))
+psych::alpha(select(dfenc, econ1:econ3))
+```
+
+### Ordinal alpha
+
+Ordinal alpha was introduced by Zumbo et al. (2007) ant it was shown to estimate reliability more accurately than Cronbach's alpha for ordinal response scales.
+
+McDonald (1985, p. 217) describes how one can compute coefficient alpha from a factor analysis model. For a composite score based on k items the coefficient alpha can be computed as
+$$
+\alpha = \frac{k}{k-1} \left( \frac{k(\bar{f})^2 - \bar{f^2}}{k(\bar{f})^2-\bar{u}^2} \right),
+$$
+where $\bar{f}$ is the mean of the factor scores, $\bar{f^2}$ is the mean of the squared factor scores, and $\bar{u}^2$ is the mean of the squared unique variances. The analysis factor is carried out with the polychoric correlation matrix.
+```{r, echo=TRUE}
+cor_poly <- polychoric(select(dfenc, holis1:econ3))
+psych::alpha(cor_poly$rho)
+corh_poly <- polychoric(select(dfenc, holis1:holis5))
+psych::alpha(corh_poly$rho)
+cors_poly <- polychoric(select(dfenc, social1:social4))
+psych::alpha(cors_poly$rho)
+core_poly <- polychoric(select(dfenc, econ1:econ3))
+psych::alpha(core_poly$rho)
+```
+
+## Kaiser-Meyer-Olkin (KMO) test
+
+The KMO test is a statistical measure to determine how suited data is for factor analysis. The test measures sampling adequacy for each variable in the model and the complete model. The statistic is a measure of the proportion of variance among variables that might be common variance.    
+
+The MSA (Measure of Sampling Adequacy) criterion is calculated and return values between 0 and 1.
+$$
+\hbox{MSA} =  \frac{\sum_{j\neq k} r_{jk}^2}{\sum_{j\neq k} r_{jk}^2 + \sum_{j\neq k} p_{jk}^2}
+$$
+Here $r_{jk}$ is the correlation between the variable in question and another, and $p_{jk}$ is the partial correlation. KMO values between 0.8 and 1 indicate the sampling is adequate. KMO values less than 0.6 indicate the sampling is not adequate and that remedial action should be taken. In contrast, others set this cutoff value at 0.5. A KMO value close to zero means that there are large partial correlations compared to the sum of correlations. In other words, there are widespread correlations which would be a large problem for factor analysis.
+
+```{r, echo=TRUE}
+cor_matrix <- cor(select(dfenc,holis1:econ3))
+KMO(cor_matrix)
+cor_poly <- polychoric(select(dfenc, holis1:econ3))
+KMO(cor_poly$rho)
+```
+
+## Exploratory factor analysis
+
+```{r, echo=TRUE}
+M1 <- fa(cor_matrix, nfactors = 3, rotate =  "oblimin" )
+print(M1)
+fa.diagram(M1, main="cor_matrix")
+```
+
+```{r, echo=TRUE}
+M1 <- fa(cor_poly$rho, nfactors = 3, rotate =  "oblimin" )
+print(M1)
+fa.diagram(M1, main="cor_poly")
+```
+
+## Confirmatory factor analysis
+
+### Maximum Likelihood
+
+Let us estimate the model with Maximum Likelihood.
+
+```{r, echo=TRUE}
+dfitems <- select(dfenc, holis1:econ3)
+mla <- 'f1 =~ holis1 + holis2 + holis3 + holis4 + holis5
+        f2 =~ social1 + social3 + social2 + social4
+        f3 =~ econ1 + econ2 + econ3
+        f1 ~~ 1*f1'
+threef <- cfa(mla, data=dfitems, std.lv=TRUE)
+summary(threef, fit.measures=TRUE, standardized=TRUE)
+```
+
+### Diagonally Weighted Least Squares
+
+Now let us use the diagonally weighted least square (DWLS).
+```{r, echo=TRUE}
+dfitems <- select(dfenc, holis1:econ3)
+mla <- 'f1 =~ holis1 + holis2 + holis3 + holis4 + holis5 + social3
+        f2 =~ social1 + social2 + social4
+        f3 =~ econ1 + econ2 + econ3'
+threef_dwls <- cfa(mla, data=dfitems, ordered=colnames(dfitems), estimator="DWLS")
+summary(threef_dwls, fit.measures=TRUE, standardized=TRUE)
+# Check modification indices to identify potential model improvements
+modindices(threef_dwls, sort = TRUE, minimum.value = 10)
+```
+
+## Multiple linear regression
+
+```{r, echo=TRUE}
+p.mat <- cor_pmat(select(dfenc,change, holis:econ))
+ggcorrplot(cor(select(dfenc,change, holis:econ)), 
+           type="lower", 
+           lab=TRUE,
+           lab_size=3,
+           insig="blank",
+           p.mat=p.mat,
+           digits=4,
+           sig.level=0.10)
+
+ggpairs(select(dfenc,holis:econ, change), aes(alpha=0.1))
+```
+
+```{r, echo=TRUE}
+model <- lm(change ~ campus + holis + social + econ, data=dfenc)
+summary(model)
+
+# Residual analysis
+p1 <- ggplot(mapping = aes(sample = residuals(model))) + 
+  stat_qq_point(size = 1, color="black") + 
+  stat_qq_line(color="red") + 
+  labs(x="Change", y = "Residuals")
+p2 <- ggplot(model, aes(x=fitted(model), y=residuals(model))) +
+  geom_point() +
+  #geom_point(group=model$model$change, color=model$model$change) + 
+  labs(x="Fitted values", y="Residuals") +
+  theme(legend.position = "top")
+grid.arrange(p1, p2, nrow=1)
+
+# Kolmogorov-Smirnov test
+ksout <- ks.test(residuals(model), "pnorm", mean=0, sd=sd(residuals(model))) 
+print(ksout)
+```
+
+## References
+
+Espinoza, S. C., & Novoa-Muñoz, F. (2018). Ventajas del alfa ordinal respecto al alfa de Cronbach ilustradas con la encuesta AUDIT-OMS. Revista Panamericana de Salud Pública, 42, e65.
+
+Marôco, J. (2024). Factor Analysis of Ordinal Items: Old Questions, Modern Solutions?.
+
+Nye, C. D. (2023). Reviewer resources: Confirmatory factor analysis. Organizational Research Methods, 26(4), 608-628.
+
+Okur-Berberoglu, E. (2020). An ecological intelligence scale intended for adults. World Futures, 76(3), 133-152.
+
+Yves Rosseel (2012). lavaan: An R Package for Structural Equation Modeling. Journal of Statistical Software, 48(2), 1-36. URL http://www.jstatsoft.org/v48/i02/
+
+Zumbo, B. D., Gadermann, A. M., & Zeisser, C. (2007). Ordinal versions of coefficients alpha and theta for Likert rating scales. Journal of modern applied statistical methods, 6, 21-29.
