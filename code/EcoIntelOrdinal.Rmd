@@ -276,8 +276,7 @@ Let us estimate the model with Maximum Likelihood.
 dfitems <- select(dfenc, holis1:econ3)
 mla <- 'f1 =~ holis1 + holis2 + holis3 + holis4 + holis5
         f2 =~ social1 + social3 + social2 + social4
-        f3 =~ econ1 + econ2 + econ3
-        f1 ~~ 1*f1'
+        f3 =~ econ1 + econ2 + econ3'
 threef <- cfa(mla, data=dfitems, std.lv=TRUE)
 summary(threef, fit.measures=TRUE, standardized=TRUE)
 ```
@@ -290,10 +289,10 @@ dfitems <- select(dfenc, holis1:econ3)
 mla <- 'f1 =~ holis1 + holis2 + holis3 + holis4 + holis5 + social3
         f2 =~ social1 + social2 + social4
         f3 =~ econ1 + econ2 + econ3'
-threef_dwls <- cfa(mla, data=dfitems, ordered=colnames(dfitems), estimator="DWLS")
-summary(threef_dwls, fit.measures=TRUE, standardized=TRUE)
+fit_dwls <- cfa(mla, data=dfitems, estimator="DWLS")
+summary(fit_dwls, fit.measures=TRUE, standardized=TRUE)
 # Check modification indices to identify potential model improvements
-modindices(threef_dwls, sort = TRUE, minimum.value = 10)
+modindices(fit_dwls, sort = TRUE, minimum.value = 10)
 ```
 
 ## Multiple linear regression
