@@ -63,7 +63,7 @@ We read the clean data. The cleaning was done in Python.
 
 ```{r, echo=TRUE}
 data_file_path <- here::here("data", "Eco_Intel2_clean.xlsx")
-dfenc <- read.xlsx(xlsxFile = data_file_path) 
+dfenc <- read.xlsx(xlsxFile = data_file_path)
 head(dfenc)
 ```
 
@@ -273,26 +273,61 @@ fa.diagram(M1, main="cor_poly")
 Let us estimate the model with Maximum Likelihood.
 
 ```{r, echo=TRUE}
-dfitems <- select(dfenc, holis1:econ3)
-mla <- 'f1 =~ holis1 + holis2 + holis3 + holis4 + holis5
-        f2 =~ social1 + social3 + social2 + social4
-        f3 =~ econ1 + econ2 + econ3'
-threef <- cfa(mla, data=dfitems, std.lv=TRUE)
-summary(threef, fit.measures=TRUE, standardized=TRUE)
+dfencc <- dfenc
+colnames(dfencc) <- c("date", "student", "programa", "campus", "sex", 
+                      "nationality", "age", "Item1", "Item2", "Item3",
+                      "Item4", "Item5", "Item6", "Item7", "Item8",
+                      "Item9", "Item10", "Item11", "Item12", "change",
+                      "argument", "holis", "social", "econ")
+dfitems <- select(dfencc, Item1:Item12)
+mla <- 'holistic =~ Item1 + Item2 + Item3 + Item4 + Item5
+        social =~ Item6 + Item7 + Item8 + Item9
+        econ =~ Item10 + Item11 + Item12 '
+fit_ml <- cfa(mla, data=dfitems, std.lv=TRUE)
+summary(fit_ml, fit.measures=TRUE, standardized=TRUE)
+# Check modification indices to identify potential model improvements
+modindices(fit_ml, sort = TRUE, minimum.value = 10)
+```
+
+```{r, echo=TRUE}
+library(semPlot)
+
+semPaths(fit_ml, "mod", "est", layout="spring", edge.color="blue", 
+         nCharNodes=6, edge.label.cex=.8, color = list(
+              lat = "darkolivegreen3", 
+              man = "ivory2"))
 ```
 
 ### Diagonally Weighted Least Squares
 
 Now let us use the diagonally weighted least square (DWLS).
 ```{r, echo=TRUE}
-dfitems <- select(dfenc, holis1:econ3)
-mla <- 'f1 =~ holis1 + holis2 + holis3 + holis4 + holis5 + social3
-        f2 =~ social1 + social2 + social4
-        f3 =~ econ1 + econ2 + econ3'
+dfencc <- dfenc
+colnames(dfencc) <- c("date", "student", "programa", "campus", "sex", 
+                      "nationality", "age", "Item1", "Item2", "Item3",
+                      "Item4", "Item5", "Item6", "Item7", "Item8",
+                      "Item9", "Item10", "Item11", "Item12", "change",
+                      "argument", "holis", "social", "econ")
+dfitems <- select(dfencc, Item1:Item12)
+mla <- 'holistic =~ NA*Item1 + Item2 + Item3 + Item4 + Item5
+        social =~ NA*Item6 + Item7 + Item8 + Item9
+        econ =~ NA*Item10 + Item11 + Item12 
+        holistic ~~ 1*holistic
+        social ~~ 1*social
+        econ ~~ 1*econ'
 fit_dwls <- cfa(mla, data=dfitems, estimator="DWLS")
 summary(fit_dwls, fit.measures=TRUE, standardized=TRUE)
 # Check modification indices to identify potential model improvements
 modindices(fit_dwls, sort = TRUE, minimum.value = 10)
+```
+
+```{r, echo=TRUE}
+library(semPlot)
+
+semPaths(fit_dwls, "mod", "est", layout="spring", edge.color="blue", 
+         nCharNodes=6, edge.label.cex=.8, color = list(
+              lat = "darkolivegreen3", 
+              man = "ivory2"))
 ```
 
 ## Multiple linear regression
