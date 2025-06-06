@@ -292,7 +292,7 @@ modindices(fit_ml, sort = TRUE, minimum.value = 10)
 ```{r, echo=TRUE}
 library(semPlot)
 
-semPaths(fit_ml, "mod", "est", layout="spring", edge.color="blue", 
+semPaths(fit_ml, "path", "est", layout="spring", edge.color="blue", 
          nCharNodes=6, edge.label.cex=.8, color = list(
               lat = "darkolivegreen3", 
               man = "ivory2"))
@@ -309,9 +309,9 @@ colnames(dfencc) <- c("date", "student", "programa", "campus", "sex",
                       "Item9", "Item10", "Item11", "Item12", "change",
                       "argument", "holis", "social", "econ")
 dfitems <- select(dfencc, Item1:Item12)
-mla <- 'holistic =~ NA*Item1 + Item2 + Item3 + Item4 + Item5
+mla <- 'holistic =~ NA*Item1 + Item2 + Item3 + Item4 + Item5 
         social =~ NA*Item6 + Item7 + Item8 + Item9
-        econ =~ NA*Item10 + Item11 + Item12 
+        econ =~ NA*Item10 + Item11 + Item12
         holistic ~~ 1*holistic
         social ~~ 1*social
         econ ~~ 1*econ'
@@ -324,7 +324,11 @@ modindices(fit_dwls, sort = TRUE, minimum.value = 10)
 ```{r, echo=TRUE}
 library(semPlot)
 
-semPaths(fit_dwls, "mod", "est", layout="spring", edge.color="blue", 
+# "est" estimated model parameters
+# "std" The variance of both observed and latent variables is set to 1
+# "std.all" Same as "std"
+# "std.lv" Only the variance of latent variables is set to 1
+semPaths(fit_dwls, "path", "est", layout="spring", edge.color="blue", 
          nCharNodes=6, edge.label.cex=.8, color = list(
               lat = "darkolivegreen3", 
               man = "ivory2"))
