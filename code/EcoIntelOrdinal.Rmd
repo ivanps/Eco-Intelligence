@@ -70,9 +70,6 @@ head(dfenc)
 Now we compute the indicators and its statistics.
 
 ```{r, echo=TRUE}
-dfenc$campus[dfenc$campus == "Aguascalientes"] <- "Otro"
-dfenc$campus[dfenc$campus == "Morelia"] <- "Otro"
-
 options(width=200)
 dfenc <- dfenc %>%
   mutate(holis = (holis1+holis2+holis3+holis4+holis5)/5,
@@ -351,7 +348,9 @@ ggpairs(select(dfenc,holis:econ, change), aes(alpha=0.1))
 ```
 
 ```{r, echo=TRUE}
-model <- lm(change ~ campus + holis + social + econ, data=dfenc)
+dfencr <- dfenc
+dfencr$campus <- ifelse(dfencr$campus %in% c("León", "Chihuahua"), "Otro", dfencr$campus)
+model <- lm(change ~ campus + program + sex + holis + social + econ, data=dfencr)
 summary(model)
 
 # Residual analysis
