@@ -223,12 +223,17 @@ $$
 where $\bar{f}$ is the mean of the factor scores, $\bar{f^2}$ is the mean of the squared factor scores, and $\bar{u}^2$ is the mean of the squared unique variances. The analysis factor is carried out with the polychoric correlation matrix.
 ```{r, echo=TRUE}
 cor_poly <- polychoric(select(dfenc, holis1:econ3))
-psych::alpha(cor_poly$rho)
 corh_poly <- polychoric(select(dfenc, holis1:holis5))
-psych::alpha(corh_poly$rho)
 cors_poly <- polychoric(select(dfenc, social1:social4))
-psych::alpha(cors_poly$rho)
 core_poly <- polychoric(select(dfenc, econ1:econ3))
+
+cat("Overall alpha =", psych::alpha(cor_poly$rho)$total$raw_alpha, "\n")
+cat("Holistic alpha =", psych::alpha(corh_poly$rho)$total$raw_alpha, "\n")
+cat("Econ alpha =", psych::alpha(core_poly$rho)$total$raw_alpha, "\n")
+cat("Social alpha =", psych::alpha(cors_poly$rho)$total$raw_alpha, "\n")
+psych::alpha(cor_poly$rho)
+psych::alpha(corh_poly$rho)
+psych::alpha(cors_poly$rho)
 psych::alpha(core_poly$rho)
 ```
 
@@ -245,8 +250,10 @@ Here $r_{jk}$ is the correlation between the variable in question and another, a
 ```{r, echo=TRUE}
 cor_matrix <- cor(select(dfenc,holis1:econ3))
 KMO(cor_matrix)
+cat("Overall MSA =", KMO(cor_matrix)$MSA, "\n")
 cor_poly <- polychoric(select(dfenc, holis1:econ3))
 KMO(cor_poly$rho)
+cat("Overall MSA =", KMO(cor_poly$rho)$MSA, "\n")
 ```
 
 ## Exploratory factor analysis
@@ -368,6 +375,27 @@ grid.arrange(p1, p2, nrow=1)
 # Kolmogorov-Smirnov test
 ksout <- ks.test(residuals(model), "pnorm", mean=0, sd=sd(residuals(model))) 
 print(ksout)
+```
+
+```{r echo=FALSE}
+# Save dfencr dataset to a csv file
+data_file_path_out <- here::here("data", "Eco_Intel2_regression.csv")
+write.csv(dfencr, file = data_file_path_out, row.names = FALSE)
+```
+
+
+## ANOVA analysis
+
+```{r echo=TRUE}
+# Run ANOVA analysis to compare program
+anova_holis <- aov(holis ~ program, data=dfencr)
+summary(anova_holis)
+anova_social <- aov(social ~ program, data=dfencr)
+summary(anova_social)
+anova_econ <- aov(econ ~ program, data=dfencr)
+summary(anova_econ)
+anova_change <- aov(change ~ program, data=dfencr)
+summary(anova_change)
 ```
 
 ## References
